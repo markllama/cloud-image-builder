@@ -1,0 +1,39 @@
+{
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+        "annotations": {
+            "openshift.io/generated-by": "OpenShiftNewApp",
+            "service.alpha.openshift.io/dependencies": "[{\"name\": \"jenkins-jnlp\", \"namespace\": \"\", \"kind\": \"Service\"}]",
+            "service.openshift.io/infrastructure": "true"
+        },
+        "creationTimestamp": "2018-07-13T20:43:54Z",
+        "labels": {
+            "template": "jenkins-kubevirt-persistent"
+        },
+        "name": "jenkins",
+        "namespace": "kubevirt",
+        "resourceVersion": "54396195",
+        "selfLink": "/api/v1/namespaces/kubevirt/services/jenkins",
+        "uid": "751dd832-86dd-11e8-8b52-0cc47a66a374"
+    },
+    "spec": {
+        "clusterIP": "172.30.205.83",
+        "ports": [
+            {
+                "name": "web",
+                "port": 80,
+                "protocol": "TCP",
+                "targetPort": 8080
+            }
+        ],
+        "selector": {
+            "name": "jenkins"
+        },
+        "sessionAffinity": "None",
+        "type": "ClusterIP"
+    },
+    "status": {
+        "loadBalancer": {}
+    }
+}

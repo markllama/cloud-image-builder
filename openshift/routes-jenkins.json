@@ -1,0 +1,48 @@
+{
+    "apiVersion": "route.openshift.io/v1",
+    "kind": "Route",
+    "metadata": {
+        "annotations": {
+            "openshift.io/generated-by": "OpenShiftNewApp",
+            "openshift.io/host.generated": "true"
+        },
+        "creationTimestamp": "2018-07-13T20:43:54Z",
+        "labels": {
+            "template": "jenkins-kubevirt-persistent"
+        },
+        "name": "jenkins",
+        "namespace": "kubevirt",
+        "resourceVersion": "54396169",
+        "selfLink": "/apis/route.openshift.io/v1/namespaces/kubevirt/routes/jenkins",
+        "uid": "74db3585-86dd-11e8-8b52-0cc47a66a374"
+    },
+    "spec": {
+        "host": "jenkins-kubevirt.apps.ci.centos.org",
+        "tls": {
+            "insecureEdgeTerminationPolicy": "Redirect",
+            "termination": "edge"
+        },
+        "to": {
+            "kind": "Service",
+            "name": "jenkins",
+            "weight": 100
+        },
+        "wildcardPolicy": "None"
+    },
+    "status": {
+        "ingress": [
+            {
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2018-07-13T20:43:54Z",
+                        "status": "True",
+                        "type": "Admitted"
+                    }
+                ],
+                "host": "jenkins-kubevirt.apps.ci.centos.org",
+                "routerName": "router",
+                "wildcardPolicy": "None"
+            }
+        ]
+    }
+}
