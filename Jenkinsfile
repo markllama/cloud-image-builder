@@ -1,33 +1,110 @@
 #!/usr/bin/env groovy
+properties(
+    [
+        disableConcurrentBuilds(),
+        buildDiscarder(
+            logRotator(
+                artifactDaysToKeepStr: '',
+                artifactNumToKeepStr: '',
+                daysToKeepStr: '',
+                numToKeepStr: '5')),
+        [
+            $class: 'ParametersDefinitionProperty',
+            parameterDefinitions: [
+                [
+                    name: 'GCP_CREDENTIALS',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-gcp-credentials-file'
+                ],
+                [
+                    name: 'GCP_SSH_PRIVATE_KEY_FILE',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-gcp-ssh-private-key'
+                ],
+                [
+                    name: 'GCP_SSH_PUBLIC_KEY_FILE',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-gcp-ssh-public-key'
+                ],
 
+
+                [
+                    name: 'AWS_ACCESS_KEY_ID',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-aws-access-key-id'
+                ],
+                [
+                    name: 'AWS_SECRET_ACCESS_KEY',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-aws-secret-access-key'
+                ],
+                [
+                    name: 'AWS_SUBNET_ID_CRED',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-aws-subnet-id'
+                ],
+                [
+                    name: 'AWS_SECURITY_GROUP_ID_CRED',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-aws-security-group-id'
+                ],
+                [
+                    name: 'AWS_SECURITY_GROUP_CRED',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-aws-security-group'
+                ],
+                [
+                    name: 'AWS_KEY_NAME_CRED',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-aws-key-name'
+                ],
+                [
+                    name: 'AWS_SSH_PRIVATE_KEY',
+                    description: '',
+                    $class: 'hudson.model.StringParameterDefinition',
+                    defaultValue: 'kubevirt-aws-ssh-private-key'
+                ],
+            ]
+        ]
+    ]
+)
 
 def gcp_credentials = [
-        sshUserPrivateKey(credentialsId: 'kubevirt-gcp-ssh-private-key', keyFileVariable: 'SSH_KEY_LOCATION'),
-        file(credentialsId: 'kubevirt-gcp-credentials-file', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
-        file(credentialsId: 'kubevirt-gcp-ssh-public-key', variable: 'GCP_SSH_PUBLIC_KEY')
+    sshUserPrivateKey(credentialsId: GCP_SSH_PRIVATE_KEY_FILE, keyFileVariable: 'SSH_KEY_LOCATION'),
+    file(credentialsId: GCP_APP_CREDENTIALS, variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
+    file(credentialsId: GCP_SSH_PUBLIC_KEY_FILE, variable: 'GCP_SSH_PUBLIC_KEY')
 
 ]
 
 def aws_credentials = [
-        string(credentialsId: 'kubevirt-aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-        string(credentialsId: 'kubevirt-aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
-        string(credentialsId: 'kubevirt-aws-subnet-id', variable: 'AWS_SUBNET_ID'),
-        string(credentialsId: 'kubevirt-aws-security-group-id', variable: 'AWS_SECURITY_GROUP_ID'),
-        string(credentialsId: 'kubevirt-aws-security-group', variable: 'AWS_SECURITY_GROUP'),
-        string(credentialsId: 'kubevirt-aws-key-name', variable: 'AWS_KEY_NAME'),
-        sshUserPrivateKey(credentialsId: 'kubevirt-aws-ssh-private-key', keyFileVariable: 'SSH_KEY_LOCATION')
+    string(credentialsId: AWS_ACCESS_KEY_ID, variable: 'AWS_ACCESS_KEY_ID'),
+    string(credentialsId: AWS_SECRET_ACCESS_KEY, variable: 'AWS_SECRET_ACCESS_KEY'),
+    string(credentialsId: AWS_SUBNET_ID_CRED, variable: 'AWS_SUBNET_ID'),
+    string(credentialsId: AWS_SECURIT_GROUP_ID_CRED, variable: 'AWS_SECURITY_GROUP_ID'),
+    string(credentialsId: AWS_SECURIT_GROUP_CRED, variable: 'AWS_SECURITY_GROUP'),
+    string(credentialsId: AWS_KEY_NAME_CRED, variable: 'AWS_KEY_NAME'),
+    sshUserPrivateKey(credentialsId: AWS_SSH_PRIVATE_KEY, keyFileVariable: 'SSH_KEY_LOCATION')
 
 ]
 
 def images = [
-        'aws-centos': [
-                'envFile': 'environment.aws',
-                'credentials': aws_credentials
-        ],
-        'gcp-centos': [
-                'envFile': 'environment.gcp',
-                'credentials': gcp_credentials
-        ]
+    'aws-centos': [
+        'envFile': 'environment.aws',
+        'credentials': aws_credentials
+    ],
+    'gcp-centos': [
+        'envFile': 'environment.gcp',
+        'credentials': gcp_credentials
+    ]
 ]
 
 builders = [:]
@@ -50,7 +127,7 @@ images.each { imageName, imageValues ->
         }
 
         deployOpenShiftTemplate(containersWithProps: containers, openshift_namespace: 'kubevirt', podName: podName,
-                docker_repo_url: '172.30.254.79:5000', jenkins_slave_image: 'jenkins-contra-slave:latest') {
+                                docker_repo_url: '172.30.254.79:5000', jenkins_slave_image: 'jenkins-contra-slave:latest') {
 
             ciPipeline(buildPrefix: 'kubevirt-image-builder', decorateBuild: decoratePRBuild(), archiveArtifacts: archives, timeout: 120) {
 
@@ -78,7 +155,7 @@ images.each { imageName, imageValues ->
                         """
 
                         executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                credentials: credentials)
+                                           credentials: credentials)
 
                     }
 
@@ -90,7 +167,7 @@ images.each { imageName, imageValues ->
 
 
                         executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                loadProps: ["build-image-${imageName}"], credentials: credentials)
+                                           loadProps: ["build-image-${imageName}"], credentials: credentials)
                     }
 
                     if (env['TAG_NAME']) {
@@ -100,7 +177,7 @@ images.each { imageName, imageValues ->
                             """
 
                             executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                    loadProps: ["build-image-${imageName}"], credentials: credentials)
+                                               loadProps: ["build-image-${imageName}"], credentials: credentials)
                         }
                     }
 
@@ -115,7 +192,7 @@ images.each { imageName, imageValues ->
                         """
 
                         executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                loadProps: ['build-image'], credentials: credentials)
+                                           loadProps: ['build-image'], credentials: credentials)
                     }
 
                     echo "ENDING BUILD OF - ${imageName}"
