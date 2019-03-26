@@ -32,7 +32,7 @@ function set_network_addresses() {
 }
 
 function deploy_kubernetes() {
-    sudo ansible-playbook playbooks/cluster/kubernetes/cluster-localhost.yml \
+    sudo ansible-playbook ${KUBEVIRT_ANSIBLE_DIR}/playbooks/cluster/kubernetes/cluster-localhost.yml \
          --connection=local \
          --inventory ${INVENTORY_FILE}
 }
