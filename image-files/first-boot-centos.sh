@@ -1,4 +1,11 @@
 #! /bin/sh
+#
+# NOTE: This script should reside in /usr/local/bin.
+#       It is executed at bootup of the instance by the kubevirt-installer
+#       service. The script disables this service at the end of ths run.
+#       The script creates and changes files in the centos user space, but
+#       leaves those files with root as the owner.
+#
 export KUBEVIRT_ANSIBLE_DIR=/home/centos/kubevirt-ansible
 cd $KUBEVIRT_ANSIBLE_DIR
 echo "[masters]" >> inventory-aws
@@ -20,11 +27,6 @@ sudo cp /etc/kubernetes/admin.conf /home/centos
 sudo chown centos:centos /home/centos/admin.conf
 export KUBECONFIG=/home/centos/admin.conf
 echo "export KUBECONFIG=~/admin.conf" >> /home/centos/.bash_profile
-
-# Put the kubeconfig in the default place for SSH without a TTY (and profile) 
-sudo mkdir /home/centos/.kube
-sudo ln --symbolic ../admin.conf /home/centos/.kube/config
-sudo chown --recursive centos:centos /home/centos/.kube
 
 # wait for kubernetes cluster to be up
 sudo ansible-playbook /home/centos/cluster-wait.yml --connection=local
