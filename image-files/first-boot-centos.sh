@@ -3,60 +3,115 @@
 # NOTE: This script should reside in /usr/local/bin.
 #       It is executed at bootup of the instance by the kubevirt-installer
 #       service. The script disables this service at the end of ths run.
-#       The script creates and changes files in the centos user space, but
-#       leaves those files with root as the owner.
+#       The script creates and changes files in the centos user space
 #
-export KUBEVIRT_ANSIBLE_DIR=/home/centos/kubevirt-ansible
-cd $KUBEVIRT_ANSIBLE_DIR
-echo "[masters]" >> inventory-aws
-hostname >> inventory-aws
+export KUBEVIRT_ANSIBLE_DIR=~/kubevirt-ansible
 
-# make sure we use a weave network that doesnt conflict
-for num in `seq 30 50` ; do
- ip r | grep -q 172.$num
- if [ "$?" != "0" ] ; then
-  sed -i "s/172.30/172.$num/" playbooks/roles/kubernetes-master/vars/main.yml
-  break
- fi
-done
+SAVE_DIR=~/.save
 
-sudo ansible-playbook playbooks/cluster/kubernetes/cluster-localhost.yml --connection=local -i inventory-aws
+INVENTORY_FILE=~/inventory
 
-# enable kubectl for centos user
-sudo cp /etc/kubernetes/admin.conf /home/centos
-sudo chown centos:centos /home/centos/admin.conf
-export KUBECONFIG=/home/centos/admin.conf
-echo "export KUBECONFIG=~/admin.conf" >> /home/centos/.bash_profile
+function create_inventory() {
+    echo "[masters]" > ${INVENTORY_FILE}
+    hostname >> ${INVENTORY_FILE}
+}
 
-# wait for kubernetes cluster to be up
-sudo ansible-playbook /home/centos/cluster-wait.yml --connection=local
+function set_network_addresses() {
+    # make sure we use a weave network that doesnt conflict
+    local master_vars_file=${KUBEVIRT_ANSIBLE_DIR}/playbooks/roles/kubernetes-master/vars/main.yml
+    
+    if [ -w ${master_vars_file} ] ; then
+        for num in `seq 30 50` ; do
+            ip r | grep -q 172.$num
+            if [ "$?" != "0" ] ; then
+                sed -i "s/172.30/172.$num/" ${master_vars_file}
+                break
+            fi
+        done
+    fi
+}
 
-# deploy kubevirt
-kubectl create namespace kubevirt
-# enable software emulation
-grep -q -E 'vmx|svm' /proc/cpuinfo || kubectl create configmap -n kubevirt kubevirt-config --from-literal debug.useEmulation=true
-export KUBEVIRT_VERSION=$(cat /home/centos/kubevirt-version)
-wget https://github.com/kubevirt/kubevirt/releases/download/v$KUBEVIRT_VERSION/kubevirt-operator.yaml
-wget https://github.com/kubevirt/kubevirt/releases/download/v$KUBEVIRT_VERSION/kubevirt-cr.yaml
-kubectl apply -f kubevirt-operator.yaml
-kubectl apply -f kubevirt-cr.yaml
+function deploy_kubernetes() {
+    sudo ansible-playbook playbooks/cluster/kubernetes/cluster-localhost.yml \
+         --connection=local \
+         --inventory ${INVENTORY_FILE}
+}
+
+function configure_kubernetes_client() {
+    mkdir -p ~/.kube
+    cp /etc/kubernetes/admin.conf ~/.kube/config
+}
+
+function wait_for_kubernetes() {
+    # wait for kubernetes cluster to be up
+    sudo ansible-playbook ~/cluster-wait.yml --connection=local
+}
+
+function deploy_kubevirt() {
+    # deploy kubevirt
+    kubectl create namespace kubevirt
+    # enable software emulation
+    grep -q -E 'vmx|svm' /proc/cpuinfo || kubectl create configmap -n kubevirt kubevirt-config --from-literal debug.useEmulation=true
+    export KUBEVIRT_VERSION=$(cat ~/kubevirt-version)
+    wget https://github.com/kubevirt/kubevirt/releases/download/v$KUBEVIRT_VERSION/kubevirt-operator.yaml
+    wget https://github.com/kubevirt/kubevirt/releases/download/v$KUBEVIRT_VERSION/kubevirt-cr.yaml
+    kubectl apply -f kubevirt-operator.yaml
+    kubectl apply -f kubevirt-cr.yaml
+}
 
 # validate kubevirt pods and services are up
-mv /home/centos/after-install-checks.yml .
-sudo ansible-playbook after-install-checks.yml --connection=local -i inventory-aws
+function validate_kubevirt_installation() {
+    ansible-playbook after-install-checks.yml \
+                     --connection=local \
+                     --inventory ${INVENTORY_FILE}
+}
 
-# remove CDI because users will create it as a lab exercise
-kubectl delete -f /tmp/cdi-provision.yml
+function delete_cdi() {
+    # remove CDI because users will create it as a lab exercise
+    # cdi-provision is in /tmp? MAL
+    kubectl delete -f /tmp/cdi-provision.yml
+}
 
-# generate motd
-cd /home/centos
-sudo ansible-playbook motd.yml -v
-rm motd*
-rm kubevirt-version
+function generate_motd() {
+    sudo ansible-playbook motd.yml -v
+    mv motd* ~/.save
+    mv kubevirt-version ~/.save
+}
 
-# cleanup
-rm cluster-wait.yml
-rm emulation-configmap.yaml
+function cleanup_files() {
+    # Don't throw things away
+    mkdir -p ${SAVE_DIR}
 
-# disable the service so it only runs the first time the VM boots
-sudo chkconfig kubevirt-installer off
+    local save_files="${INVENTORY_FILE} after-install-checks.yml cluster-wait.yml emulation-configmap.yaml"
+    local file
+    
+    # cleanup
+    for file in ${save_files} ; do
+        [ -f ${file} ] && mv ${file} ${SAVE_DIR}
+    done
+}
+
+function disable_kubevirt_installer() {
+    # disable the service so it only runs the first time the VM boots
+    sudo chkconfig kubevirt-installer off
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+create_inventory
+set_network_addresses
+
+deploy_kubernetes
+#configure_kubernetes_client
+#wait_for_kubernetes
+
+#deploy_kubevirt
+#validate_kubevirt_installation
+
+#delete_cdi
+
+#generate_motd
+#disable_kubevirt_installer
+cleanup_files
