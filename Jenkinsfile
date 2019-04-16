@@ -1,12 +1,12 @@
 #!/usr/bin/env groovy
 
 
-def gcp_credentials = [
-        sshUserPrivateKey(credentialsId: 'kubevirt-gcp-ssh-private-key', keyFileVariable: 'SSH_KEY_LOCATION'),
-        file(credentialsId: 'kubevirt-gcp-credentials-file', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
-        file(credentialsId: 'kubevirt-gcp-ssh-public-key', variable: 'GCP_SSH_PUBLIC_KEY')
+// def gcp_credentials = [
+//         sshUserPrivateKey(credentialsId: 'kubevirt-gcp-ssh-private-key', keyFileVariable: 'SSH_KEY_LOCATION'),
+//         file(credentialsId: 'kubevirt-gcp-credentials-file', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
+//         file(credentialsId: 'kubevirt-gcp-ssh-public-key', variable: 'GCP_SSH_PUBLIC_KEY')
 
-]
+// ]
 
 def aws_credentials = [
         string(credentialsId: 'kubevirt-aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
@@ -24,10 +24,10 @@ def images = [
                 'envFile': 'environment.aws',
                 'credentials': aws_credentials
         ],
-        'gcp-centos': [
-                'envFile': 'environment.gcp',
-                'credentials': gcp_credentials
-        ]
+        // 'gcp-centos': [
+        //         'envFile': 'environment.gcp',
+        //         'credentials': gcp_credentials
+        // ]
 ]
 
 builders = [:]
