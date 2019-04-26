@@ -9,14 +9,34 @@
 // ]
 
 def aws_credentials = [
-        string(credentialsId: 'kubevirt-aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-        string(credentialsId: 'kubevirt-aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
-        string(credentialsId: 'kubevirt-aws-subnet-id', variable: 'AWS_SUBNET_ID'),
-        string(credentialsId: 'kubevirt-aws-security-group-id', variable: 'AWS_SECURITY_GROUP_ID'),
-        string(credentialsId: 'kubevirt-aws-security-group', variable: 'AWS_SECURITY_GROUP'),
-        string(credentialsId: 'kubevirt-aws-key-name', variable: 'AWS_KEY_NAME'),
-        sshUserPrivateKey(credentialsId: 'kubevirt-aws-ssh-private-key', keyFileVariable: 'SSH_KEY_LOCATION')
-
+    string(
+        credentialsId: 'kubevirt-aws-access-key-id',
+        variable: 'AWS_ACCESS_KEY_ID'
+    ),
+    string(
+        credentialsId: 'kubevirt-aws-secret-access-key',
+        variable: 'AWS_SECRET_ACCESS_KEY'
+    ),
+    string(
+        credentialsId: 'kubevirt-aws-subnet-id',
+        variable: 'AWS_SUBNET_ID'
+    ),
+    string(
+        credentialsId: 'kubevirt-aws-security-group-id',
+        variable: 'AWS_SECURITY_GROUP_ID'
+    ),
+    string(
+        credentialsId: 'kubevirt-aws-security-group',
+        variable: 'AWS_SECURITY_GROUP'
+    ),
+    string(
+        credentialsId: 'kubevirt-aws-key-name',
+        variable: 'AWS_KEY_NAME'
+    ),
+    sshUserPrivateKey(
+        credentialsId: 'kubevirt-aws-ssh-private-key',
+        keyFileVariable: 'SSH_KEY_LOCATION'
+    )
 ]
 
 def images = [
@@ -41,18 +61,39 @@ images.each { imageName, imageValues ->
         def params = [:]
         def credentials = []
 
-        def containers = ['ansible-executor': [tag: 'latest', privileged: false, command: 'uid_entrypoint cat']]
-
+        def containers = [
+            'ansible-executor': [
+                tag: 'latest',
+                privileged: false,
+                command: 'uid_entrypoint cat'
+            ]
+        ]
 
         def archives = {
-            step([$class   : 'ArtifactArchiver', allowEmptyArchive: true,
-                  artifacts: 'packer-build-*.json,published-aws-image-ids', fingerprint: true])
+            step(
+                [
+                    $class   : 'ArtifactArchiver',
+                    allowEmptyArchive: true,
+                    artifacts: 'packer-build-*.json,published-aws-image-ids',
+                    fingerprint: true
+                )
+            ]
         }
 
-        deployOpenShiftTemplate(containersWithProps: containers, openshift_namespace: 'kubevirt', podName: podName,
-                docker_repo_url: '172.30.254.79:5000', jenkins_slave_image: 'jenkins-contra-slave:latest') {
+        deployOpenShiftTemplate(
+            containersWithProps: containers,
+            openshift_namespace: 'kubevirt',
+            podName: podName,
+            docker_repo_url: '172.30.254.79:5000',
+            jenkins_slave_image: 'jenkins-contra-slave:latest'
+        ) {
 
-            ciPipeline(buildPrefix: 'kubevirt-image-builder', decorateBuild: decoratePRBuild(), archiveArtifacts: archives, timeout: 120) {
+            ciPipeline(
+                buildPrefix: 'kubevirt-image-builder',
+                decorateBuild: decoratePRBuild(),
+                archiveArtifacts: archives,
+                timeout: 120
+            ) {
 
                 try {
 
@@ -77,9 +118,12 @@ images.each { imageName, imageValues ->
                         sh \${BUILD_SCRIPT}
                         """
 
-                        executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                credentials: credentials)
-
+                        executeInContainer(
+                            containerName: 'ansible-executor',
+                            containerScript: cmd,
+                            stageVars: params,
+                            credentials: credentials
+                        )
                     }
 
                     stage("test-image-${imageName}") {
@@ -89,8 +133,13 @@ images.each { imageName, imageValues ->
                         """
 
 
-                        executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                loadProps: ["build-image-${imageName}"], credentials: credentials)
+                        executeInContainer(
+                            containerName: 'ansible-executor',
+                            containerScript: cmd,
+                            stageVars: params,
+                            loadProps: ["build-image-${imageName}"],
+                            credentials: credentials
+                        )
                     }
 
                     if (env['TAG_NAME']) {
@@ -99,8 +148,12 @@ images.each { imageName, imageValues ->
                             ansible-playbook -vvv --private-key \${SSH_KEY_LOCATION} \${PLAYBOOK_DEPLOY}
                             """
 
-                            executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                    loadProps: ["build-image-${imageName}"], credentials: credentials)
+                            executeInContainer(
+                                containerName: 'ansible-executor',
+                                containerScript: cmd, stageVars: params,
+                                loadProps: ["build-image-${imageName}"],
+                                credentials: credentials
+                            )
                         }
                     }
 
@@ -114,8 +167,13 @@ images.each { imageName, imageValues ->
                         ansible-playbook -vvv --private-key \${SSH_KEY_LOCATION} \${PLAYBOOK_CLEANUP}
                         """
 
-                        executeInContainer(containerName: 'ansible-executor', containerScript: cmd, stageVars: params,
-                                loadProps: ['build-image'], credentials: credentials)
+                        executeInContainer(
+                            containerName: 'ansible-executor',
+                            containerScript: cmd,
+                            stageVars: params,
+                            loadProps: ['build-image'],
+                            credentials: credentials
+                        )
                     }
 
                     echo "ENDING BUILD OF - ${imageName}"
