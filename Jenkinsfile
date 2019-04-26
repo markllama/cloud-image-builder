@@ -20,14 +20,14 @@ def aws_credentials = [
 ]
 
 def images = [
-        'aws-centos': [
-                'envFile': 'environment.aws',
-                'credentials': aws_credentials
-        ],
-        // 'gcp-centos': [
-        //         'envFile': 'environment.gcp',
-        //         'credentials': gcp_credentials
-        // ]
+    'aws-centos': [
+        'envFile': 'AWS/environment',
+        'credentials': aws_credentials
+    ],
+    'gcp-centos': [
+        'envFile': 'GCP/environment',
+        'credentials': gcp_credentials
+    ]
 ]
 
 builders = [:]
