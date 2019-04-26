@@ -1,12 +1,24 @@
 #!/usr/bin/env groovy
 
 
-// def gcp_credentials = [
-//         sshUserPrivateKey(credentialsId: 'kubevirt-gcp-ssh-private-key', keyFileVariable: 'SSH_KEY_LOCATION'),
-//         file(credentialsId: 'kubevirt-gcp-credentials-file', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
-//         file(credentialsId: 'kubevirt-gcp-ssh-public-key', variable: 'GCP_SSH_PUBLIC_KEY')
+// ------------------------------------------------------------------------
+// Cloud Access Credentials and Configuration Information
+// ------------------------------------------------------------------------
 
-// ]
+def gcp_credentials = [
+    sshUserPrivateKey(
+        credentialsId: 'kubevirt-gcp-ssh-private-key',
+        keyFileVariable: 'SSH_KEY_LOCATION'
+    ),
+    file(
+        credentialsId: 'kubevirt-gcp-credentials-file',
+        variable: 'GOOGLE_APPLICATION_CREDENTIALS'
+    ),
+    file(
+        credentialsId: 'kubevirt-gcp-ssh-public-key',
+        variable: 'GCP_SSH_PUBLIC_KEY'
+    )
+]
 
 def aws_credentials = [
     string(
@@ -39,6 +51,10 @@ def aws_credentials = [
     )
 ]
 
+// ---------------------------------------------------------------------------
+// Images to be built
+// ---------------------------------------------------------------------------
+
 def images = [
     'aws-centos': [
         'envFile': 'AWS/environment',
@@ -50,6 +66,11 @@ def images = [
     ]
 ]
 
+//
+// Create a "builder" process for each cloud family. The build will create
+// a new image
+//
+
 builders = [:]
 
 images.each { imageName, imageValues ->
@@ -58,6 +79,10 @@ images.each { imageName, imageValues ->
 
     builders[podName] = {
 
+
+        //
+        //
+        //
         def params = [:]
         def credentials = []
 
@@ -80,6 +105,9 @@ images.each { imageName, imageValues ->
             ]
         }
 
+        //
+        //
+        //
         deployOpenShiftTemplate(
             containersWithProps: containers,
             openshift_namespace: 'kubevirt',
@@ -97,6 +125,10 @@ images.each { imageName, imageValues ->
 
                 try {
 
+                    //
+                    // Populate the workspace and read the configuration from
+                    // the environment file and set the cloud credentials
+                    //
                     stage("prepare-environment-${imageName}") {
                         handlePipelineStep {
                             echo "STARTING BUILD OF - ${imageName}"
@@ -183,4 +215,8 @@ images.each { imageName, imageValues ->
     }
 }
 
+
+// 
+// Execute the builder functions to create an image in each cloud
+//
 parallel builders
