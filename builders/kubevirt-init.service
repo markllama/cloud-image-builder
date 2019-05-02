@@ -1,0 +1,10 @@
+[Unit]
+Description=Kubevirt Init at first boot
+After=kubernetes-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/kubevirt-init.sh
+
+[Install]
+WantedBy=multi-user.target

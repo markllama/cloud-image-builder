@@ -1,0 +1,11 @@
+[Unit]
+Description=Kubernetes Init at first boot
+Before=sshd.service
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/kubernetes-init.sh
+
+[Install]
+WantedBy=multi-user.target

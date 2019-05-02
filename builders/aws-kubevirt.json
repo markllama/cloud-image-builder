@@ -1,0 +1,57 @@
+{
+  "variables": {
+    "aws_access_key": "",
+    "aws_secret_key": "",
+    "kubevirt_version": "0.16.0"
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "region": "us-east-1",
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "name": "kubernetes-base *",
+        "root-device-type": "ebs"
+      },
+      "owners":["232845868515"],
+      "most_recent": true
+    },
+    "instance_type": "t2.medium",
+    "ssh_username": "centos",
+    "ami_name": "kubevirt-base {{timestamp}}"
+  }],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "./kubevirt-init.service",
+      "destination": "kubevirt-init.service"
+    },
+    {
+      "type": "file",
+      "source": "./kubevirt-init.sh",
+      "destination": "kubevirt-init.sh"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "mkdir -p ${HOME}/templates",
+        "mkdir -p ${HOME}/bin",
+        "curl --silent -L -o ${HOME}/bin/virtctl https://github.com/kubevirt/kubevirt/releases/download/v{{user `kubevirt_version`}}/virtctl-v{{user `kubevirt_version`}}-linux-amd64",
+        "chmod a+x ${HOME}/bin/virtctl",
+        "curl --silent -L -o ${HOME}/templates/kubevirt-operator.yaml https://github.com/kubevirt/kubevirt/releases/download/v{{user `kubevirt_version`}}/kubevirt-operator.yaml",
+        "curl --silent -L -o ${HOME}/templates/kubevirt-cr.yaml https://github.com/kubevirt/kubevirt/releases/download/v{{user `kubevirt_version`}}/kubevirt-cr.yaml",
+        "sudo docker pull docker.io/kubevirt/virt-operator:v{{user `kubevirt_version`}}",
+        "sudo docker pull docker.io/kubevirt/virt-api:v{{user `kubevirt_version`}}",
+        "sudo docker pull docker.io/kubevirt/virt-handler:v{{user `kubevirt_version`}}",
+        "sudo docker pull docker.io/kubevirt/virt-controller:v{{user `kubevirt_version`}}",
+        "sudo mv kubevirt-init.sh /usr/local/bin/kubevirt-init.sh",
+        "sudo chmod a+x /usr/local/bin/kubevirt-init.sh",
+        "sudo mv kubevirt-init.service /usr/lib/systemd/system/kubevirt-init.service",
+        "sudo systemctl enable kubernetes-init",
+        "sudo systemctl enable kubevirt-init"
+      ]
+    }
+  ]
+}
